@@ -1,0 +1,107 @@
+<html>
+<head>
+    <title>Test</title>
+	<script src="glutil.js"></script>
+</head>
+<body onload="start()">
+    <canvas id="c" width="800" height="600"></canvas>
+	<script id="2d-vertex-shader" type="x-shader/x-vertex">
+	
+	attribute vec2 a_pos;
+	uniform mat3 u_matrix;
+	
+	void main() {
+		gl_Position = vec4((u_matrix * vec3(a_pos, 1)).xy, 0, 1);
+	}
+	
+	</script>
+	<script id="2d-fragment-shader" type="x-shader/x-fragment">
+	
+	precision mediump float;
+	
+	void main() {
+		gl_FragColor = vec4(1, 1, 0, 1);
+	}
+	
+	</script>
+    <script>
+		
+	function start() {
+		var canvas = document.getElementById('c');
+		var gl = canvas.getContext('webgl');
+		if (gl) {
+			var vsSource = document.getElementById('2d-vertex-shader').text;
+			var fsSource = document.getElementById('2d-fragment-shader').text;
+			var vShader = glutil.createShader(gl, gl.VERTEX_SHADER, vsSource);
+			var fShader = glutil.createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+			
+			var program = glutil.createProgram(gl, vShader, fShader);
+			
+			var posAttrLoc = gl.getAttribLocation(program, 'a_pos');
+			var matrixUnLoc = gl.getUniformLocation(program, 'u_matrix');
+			var posBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+			
+			var positions = [
+				0, 0,
+				0, 200,
+				200, 0,
+				200, 200
+			];
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+			
+			gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+			
+			gl.clearColor(0, 0, 0, 1);
+			
+			gl.useProgram(program);
+			gl.enableVertexAttribArray(posAttrLoc);
+			
+			var pos = 0;
+			var timePrevious = 0;
+			var moveMult = 0.2;
+			var proj = m3.projection(gl.canvas.width, gl.canvas.height);
+			
+			requestAnimationFrame(draw);
+			
+			function draw(timeCurrent) {
+				var timeDelta = timeCurrent - timePrevious;
+				timePrevious = timeCurrent;
+				
+				pos += timeDelta * moveMult;
+				
+				if (pos > gl.canvas.width){
+					moveMult = -0.2;
+				} else if (pos < 0){
+					moveMult = 0.2;
+				}
+				
+				var matrix = proj;
+				matrix = m3.translate(matrix, pos, 300);
+				matrix = m3.rotate(matrix, -pos * 0.01);
+				matrix = m3.translate(matrix, -100, -100);
+			
+				gl.uniformMatrix3fv(matrixUnLoc, false, matrix);
+			
+				gl.clear(gl.COLOR_BUFFER_BIT);
+				
+				var size = 2;
+				var type = gl.FLOAT;
+				var normalize = false;
+				var stride = 0;
+				var offset = 0;
+				gl.vertexAttribPointer(posAttrLoc, size, type, normalize, stride, offset);
+				
+				var pType = gl.TRIANGLE_STRIP;
+				var offset = 0;
+				var count = 4;
+				gl.drawArrays(pType, offset, count);
+				
+				requestAnimationFrame(draw);
+			}
+		}
+	}
+	
+    </script>
+</body>
+</html>
